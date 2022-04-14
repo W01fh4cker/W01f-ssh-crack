@@ -1,4 +1,4 @@
-<p align="center"><img src="https://github.com/W01fh4cker/W01f-ssh-crack/blob/main/logo.png" /></p>
+<p align="center"><img src="https://github.com/W01fh4cker/W01f-ssh-crack/blob/main/lg.png" /></p>
 <h1 align="center">W01f-ssh-crack</h1>  
 <div align="center">一款综合性的ssh爆破工具，支持任意IP，不需要电脑里面事先存有key</div>
 
