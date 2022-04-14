@@ -40,7 +40,11 @@
 python W01f-ssh-crack.py -C 192.168.137.150
 ```
 
-4. 如果您在使用中遇到任何问题，您有两种途径可以反馈：
+4. 须确保您的`data.conf`、`W01f-ssh-crack.py`、`username.txt`、`password.txt`在同一目录下。
+
+5. 目前已写好的代码里面邮件发送功能只支持`QQ`邮箱，您也可以自行改成其他的，如`smtp.gmail.com`、端口`587`，详情请参考网上的教程。
+
+6. 如果您在使用中遇到任何问题，您有两种途径可以反馈：
   
     ①mailto:[sharecat2022@gmail.com](mailto:sharecat2022@gmail.com)
   
