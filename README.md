@@ -4,7 +4,7 @@
 
 # :sunny:声明
 
-1. 本程序仅供学习交流，若用本程序行违法之事，后果自负。
+1. 该项目仅供授权下使用，禁止使用该项目进行违法操作，否则自行承担后果，请各位遵守《中华人民共和国网络安全法》！！！
 2. 在此非常感谢[刘江的博客教程](https://www.liujiangblog.com/)，他的简洁易懂的文字让我快速了解了如何用paramiko实现Python内的ssh功能，具体文章地址：https://www.liujiangblog.com/blog/15/ 。
 3. 在写程序的过程中，我也参考了官方的一些文档资料，在https://docs.paramiko.org/en/stable/api/client.html 中我了解了`set_missing_host_key_policy(paramiko.WarningPolicy())`这个方法，可以让我实现不需要本地有`key`就可以连接对方的`ssh`（只用账号密码登录的时候），这一点我写完之后看其他人的代码的时候并没有发现。
 
