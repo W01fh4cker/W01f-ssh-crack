@@ -1,7 +1,7 @@
 # -*- coding: utf-8
 print("""
 @Author: W01f
-@repo: https://github.com/W01fh4cker/comprehensive-ssh-brute-crack/
+@repo: https://github.com/W01fh4cker/W01f-ssh-crack/
 @version: 1.0
 @time: 2022/4/13
 ██╗    ██╗ ██████╗ ██╗     ███████╗      ███████╗███████╗██╗  ██╗       ██████╗██████╗  █████╗  ██████╗██╗  ██╗
