@@ -13,19 +13,28 @@ from email.mime.text import MIMEText
 from email.header import Header
 from typing import Callable
 
-# print logo and some information
-print("""
-@Author: W01f
-@repo: https://github.com/W01fh4cker/W01f-ssh-crack/
-@version: 1.0
-@time: 2022/4/13
+AUTHOR = "W01fh4cker"
+REPO = "https://github.com/W01fh4cker/W01f-ssh-crack"
+VERSION = "1.0"
+MADETIME = "2022/4/13"
+NOWTIME = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+SSH_LOGO = """
      ███████╗███████╗██╗  ██╗       ██████╗██████╗  █████╗  ██████╗██╗  ██╗
      ██╔════╝██╔════╝██║  ██║      ██╔════╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝
      ███████╗███████╗███████║█████╗██║     ██████╔╝███████║██║     █████╔╝ 
      ╚════██║╚════██║██╔══██║╚════╝██║     ██╔══██╗██╔══██║██║     ██╔═██╗ 
      ███████║███████║██║  ██║      ╚██████╗██║  ██║██║  ██║╚██████╗██║  ██╗
      ╚══════╝╚══════╝╚═╝  ╚═╝       ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-                                                                                                               
+"""
+
+# print logo and some information
+print(fr"""
+        {SSH_LOGO}
+@Author: {AUTHOR}
+@repo: {REPO}
+@version: {VERSION}
+@time: {MADETIME}  
+@now: {NOWTIME}                     
 """)
 
 # re coding and fixing bugs by: [KOKOMI12345]Fuxuan(https://github.com/KOKOMI12345)
@@ -226,6 +235,7 @@ if __name__ == '__main__':
 
     if mode not in modeDict:
         modeDict['default'](f"模式{mode}不存在！")
+        print("可指定模式: client、rsa、trans")
     else:
         try:
             if mode == "default":
